@@ -26,7 +26,7 @@ export async function PUT(req) {
   const db = createAdminClient();
 
   // Upsert all rows
-  const { error } = await db.from("hours").upsert(hours, { onConflict: "id" });
+  const { error } = await db.from("hours").upsert(hours, { onConflict: ["id"] });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
