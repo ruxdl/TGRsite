@@ -72,7 +72,7 @@ export default function Contact() {
               <div className="hoursRow" key={h.id}>
                 <span className="day">{h.day}</span>
                 <span className={h.is_closed ? "closed" : "time"}>
-                  {h.is_closed ? "Fermé" : `${h.open} – ${h.close}`}
+                  {h.is_closed ? "Fermé" : `${h.morning_open || h.open || "10:00"} - ${h.morning_close || "13:00"} / ${h.afternoon_open || "14:00"} - ${h.afternoon_close || h.close || "19:00"}`}
                 </span>
               </div>
             ))}

@@ -5,23 +5,25 @@
 
 -- ─── Table : horaires ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS hours (
-  id          SERIAL PRIMARY KEY,
-  day         TEXT    NOT NULL,
-  open        TEXT    NOT NULL DEFAULT '10:00',
-  close       TEXT    NOT NULL DEFAULT '19:00',
-  is_closed   BOOLEAN NOT NULL DEFAULT false,
-  sort_order  INTEGER NOT NULL DEFAULT 0
+  id              SERIAL PRIMARY KEY,
+  day             TEXT    NOT NULL,
+  morning_open    TEXT    NOT NULL DEFAULT '10:00',
+  morning_close   TEXT    NOT NULL DEFAULT '13:00',
+  afternoon_open  TEXT    NOT NULL DEFAULT '14:00',
+  afternoon_close TEXT    NOT NULL DEFAULT '19:00',
+  is_closed       BOOLEAN NOT NULL DEFAULT false,
+  sort_order      INTEGER NOT NULL DEFAULT 0
 );
 
 -- Données initiales
-INSERT INTO hours (day, open, close, is_closed, sort_order) VALUES
-  ('Lundi',    '10:00', '19:00', false, 1),
-  ('Mardi',    '10:00', '19:00', false, 2),
-  ('Mercredi', '10:00', '19:00', false, 3),
-  ('Jeudi',    '10:00', '19:00', false, 4),
-  ('Vendredi', '10:00', '20:00', false, 5),
-  ('Samedi',   '10:00', '20:00', false, 6),
-  ('Dimanche', '10:00', '18:00', false, 7);
+INSERT INTO hours (day, morning_open, morning_close, afternoon_open, afternoon_close, is_closed, sort_order) VALUES
+  ('Lundi',    '10:00', '13:00', '14:00', '19:00', false, 1),
+  ('Mardi',    '10:00', '13:00', '14:00', '19:00', false, 2),
+  ('Mercredi', '10:00', '13:00', '14:00', '19:00', false, 3),
+  ('Jeudi',    '10:00', '13:00', '14:00', '19:00', false, 4),
+  ('Vendredi', '10:00', '13:00', '14:00', '20:00', false, 5),
+  ('Samedi',   '10:00', '13:00', '14:00', '20:00', false, 6),
+  ('Dimanche', '10:00', '13:00', '14:00', '18:00', false, 7);
 
 -- ─── Table : événements ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS events (
@@ -32,6 +34,7 @@ CREATE TABLE IF NOT EXISTS events (
   event_time  TEXT,
   type        TEXT    NOT NULL DEFAULT 'Concert',
   featured    BOOLEAN NOT NULL DEFAULT false,
+  image_url   TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -41,6 +44,8 @@ CREATE TABLE IF NOT EXISTS brands (
   name        TEXT    NOT NULL,
   category    TEXT    NOT NULL DEFAULT 'Vêtements',
   description TEXT,
+  image_url   TEXT,
+  featured    BOOLEAN NOT NULL DEFAULT false,
   sort_order  INTEGER NOT NULL DEFAULT 0,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );

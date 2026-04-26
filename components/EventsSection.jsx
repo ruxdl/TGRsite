@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import FadeIn from "./FadeIn";
+import Link from "next/link";
 
 const MONTHS_SHORT = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
-const MONTHS_LONG  = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 
 function parseDate(str) {
   return new Date(str + "T00:00:00");
@@ -14,27 +14,67 @@ function parseDate(str) {
 export default function EventsSection() {
   const [events, setEvents]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [timelineEvents, setTimelineEvents] = useState({ before: [], current: [], after: [] });
 
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
     supabase
       .from("events")
       .select("*")
-      .gte("event_date", today)
       .order("event_date")
       .then(({ data }) => {
         setEvents(data || []);
+        
+        if (data && data.length > 0) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          let beforeDate = null;
+          let afterDate = null;
+          const currentEvents = [];
+          const beforeEvents = [];
+          const afterEvents = [];
+
+          // Trouver les dates les plus proches
+          for (const ev of data) {
+            const evDate = parseDate(ev.event_date);
+            
+            if (evDate.toDateString() === today.toDateString()) {
+              currentEvents.push(ev);
+            } else if (evDate < today) {
+              if (!beforeDate || parseDate(beforeDate).toDateString() === evDate.toDateString()) {
+                beforeDate = ev.event_date;
+                beforeEvents.push(ev);
+              }
+            } else if (evDate > today) {
+              if (!afterDate || parseDate(afterDate).toDateString() === evDate.toDateString()) {
+                afterDate = ev.event_date;
+                afterEvents.length = 0;
+                afterEvents.push(ev);
+              } else if (afterDate && parseDate(afterDate).toDateString() === evDate.toDateString()) {
+                afterEvents.push(ev);
+              }
+            }
+          }
+
+          // Récupérer tous les événements de beforeDate
+          if (beforeDate) {
+            beforeEvents.length = 0;
+            for (const ev of data) {
+              if (parseDate(ev.event_date).toDateString() === parseDate(beforeDate).toDateString()) {
+                beforeEvents.push(ev);
+              }
+            }
+          }
+
+          setTimelineEvents({ before: beforeEvents, current: currentEvents, after: afterEvents });
+        }
+        
         setLoading(false);
       });
   }, []);
 
-  const typeColors = {
-    Concert:  "#2D5C47",
-    Soirée:   "#C8503A",
-    Atelier:  "#3a6e8a",
-    Marché:   "#8a6e3a",
-    Autre:    "#4A4A43",
-  };
+  const today = new Date();
+  const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}`;
 
   return (
     <section className="eventsSection" id="evenements">
@@ -50,41 +90,152 @@ export default function EventsSection() {
       ) : events.length === 0 ? (
         <div className="eventsEmpty">Aucun événement prévu pour le moment. Revenez bientôt !</div>
       ) : (
-        <div className="eventsGrid">
-          {events.map((ev) => {
-            const d = parseDate(ev.event_date);
-            return (
-              <FadeIn key={ev.id}>
-                <div className={`eventCard${ev.featured ? " eventFeatured" : ""}`}>
-                  <div className="eventCardTop">
-                    <div className="eventDateBadge">
-                      <span className="eDay">{d.getDate()}</span>
-                      <span className="eMonth">{MONTHS_SHORT[d.getMonth()]}</span>
+        <>
+          {/* Timeline blanche avec ligne noire et 3 points verts */}
+          <div style={{
+            background: "#fff",
+            borderRadius: 8,
+            padding: "60px 40px",
+            marginBottom: 50,
+            position: "relative"
+          }}>
+            {/* Ligne noire fine */}
+            <div style={{
+              position: "absolute",
+              top: "50%",
+              left: 0,
+              right: 0,
+              height: 1,
+              background: "#333",
+              transform: "translateY(-50%)"
+            }} />
+
+            {/* Conteneur 3 colonnes */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 20,
+              position: "relative",
+              zIndex: 1
+            }}>
+              {/* Point gauche - Événement avant */}
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  background: "var(--green-mid)",
+                  margin: "0 auto 20px",
+                  boxShadow: "0 0 0 4px #fff, 0 0 0 5px var(--green-mid)"
+                }} />
+                {timelineEvents.before && timelineEvents.before.length > 0 ? (
+                  <div>
+                    <div style={{ fontSize: 12, color: "#666", marginBottom: 8, fontWeight: 500 }}>
+                      Dernier événement{timelineEvents.before.length > 1 ? "s" : ""}
                     </div>
-                    <span
-                      className="eventTypePill"
-                      style={{ background: typeColors[ev.type] || typeColors.Autre }}
-                    >
-                      {ev.type}
-                    </span>
-                  </div>
-                  <div className="eventCardBody">
-                    <div className="eventTitle">{ev.title}</div>
-                    {ev.event_time && (
-                      <div className="eventTime">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-                        </svg>
-                        {ev.event_time} · {d.getDate()} {MONTHS_LONG[d.getMonth()]} {d.getFullYear()}
+                    {timelineEvents.before.map((ev, idx) => (
+                      <div key={ev.id}>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: "#333", marginBottom: 2 }}>
+                          {ev.title}
+                        </div>
+                        {idx === timelineEvents.before.length - 1 && (
+                          <div style={{ fontSize: 12, color: "#999" }}>
+                            {parseDate(ev.event_date).getDate()} {MONTHS_SHORT[parseDate(ev.event_date).getMonth()]}
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {ev.description && <p className="eventDesc">{ev.description}</p>}
+                    ))}
                   </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: "#999" }}>Aucun événement</div>
+                )}
+              </div>
+
+              {/* Point milieu - Aujourd'hui */}
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  background: "var(--green-deep)",
+                  margin: "0 auto 20px",
+                  boxShadow: "0 0 0 4px #fff, 0 0 0 5px var(--green-deep)"
+                }} />
+                <div style={{ fontSize: 12, color: "#666", marginBottom: 8, fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Aujourd'hui
                 </div>
-              </FadeIn>
-            );
-          })}
-        </div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "var(--green-deep)", marginBottom: 4 }}>
+                  {todayStr}
+                </div>
+                {timelineEvents.current && timelineEvents.current.length > 0 ? (
+                  <div>
+                    {timelineEvents.current.map((ev) => (
+                      <div key={ev.id} style={{ fontSize: 12, color: "#333", fontWeight: 500 }}>
+                        {ev.title}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: "#999" }}>Aucun événement</div>
+                )}
+              </div>
+
+              {/* Point droite - Événement après */}
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  background: "var(--green-mid)",
+                  margin: "0 auto 20px",
+                  boxShadow: "0 0 0 4px #fff, 0 0 0 5px var(--green-mid)"
+                }} />
+                {timelineEvents.after && timelineEvents.after.length > 0 ? (
+                  <div>
+                    <div style={{ fontSize: 12, color: "#666", marginBottom: 8, fontWeight: 500 }}>
+                      Prochain événement{timelineEvents.after.length > 1 ? "s" : ""}
+                    </div>
+                    {timelineEvents.after.map((ev, idx) => (
+                      <div key={ev.id}>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: "#333", marginBottom: 2 }}>
+                          {ev.title}
+                        </div>
+                        {idx === 0 && (
+                          <div style={{ fontSize: 12, color: "#999" }}>
+                            {parseDate(ev.event_date).getDate()} {MONTHS_SHORT[parseDate(ev.event_date).getMonth()]}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: "#999" }}>Aucun événement</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Button to view all events */}
+          <div style={{ textAlign: "center", marginTop: 50 }}>
+            <Link href="/events" style={{ textDecoration: "none" }}>
+              <button
+                style={{
+                  background: "none",
+                  border: "1px solid var(--green-mid)",
+                  color: "var(--green-mid)",
+                  padding: "10px 24px",
+                  borderRadius: 4,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.3s ease"
+                }}
+              >
+                Voir tous nos événements →
+              </button>
+            </Link>
+          </div>
+        </>
       )}
     </section>
   );

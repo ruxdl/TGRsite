@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import ImageUploader from "../../components/admin/ImageUploader";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function adminHeaders(password) {
@@ -109,20 +110,28 @@ function HoursTab({ password, showToast }) {
       <p className="adminSubtitle">Modifiez les horaires affichés sur le site.</p>
       <div className="adminCard">
         <h3>Planning de la semaine</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
           <span />
-          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)" }}>Ouverture</span>
-          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)" }}>Fermeture</span>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)" }}>Matin - Ouv.</span>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)" }}>Matin - Ferm.</span>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)" }}>Aprè-m - Ouv.</span>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)" }}>Aprè-m - Ferm.</span>
           <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)" }}>Fermé</span>
         </div>
         {hours.map(h => (
-          <div key={h.id} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr", gap: 10, marginBottom: 8, alignItems: "center" }}>
+          <div key={h.id} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr 1fr", gap: 10, marginBottom: 8, alignItems: "center" }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-mid)" }}>{h.day}</span>
             <div className="adminField" style={{ margin: 0 }}>
-              <input value={h.open} onChange={e => update(h.id, "open", e.target.value)} disabled={h.is_closed} style={{ opacity: h.is_closed ? 0.4 : 1 }} placeholder="10:00" />
+              <input value={h.morning_open || ""} onChange={e => update(h.id, "morning_open", e.target.value)} disabled={h.is_closed} style={{ opacity: h.is_closed ? 0.4 : 1 }} placeholder="10:00" />
             </div>
             <div className="adminField" style={{ margin: 0 }}>
-              <input value={h.close} onChange={e => update(h.id, "close", e.target.value)} disabled={h.is_closed} style={{ opacity: h.is_closed ? 0.4 : 1 }} placeholder="19:00" />
+              <input value={h.morning_close || ""} onChange={e => update(h.id, "morning_close", e.target.value)} disabled={h.is_closed} style={{ opacity: h.is_closed ? 0.4 : 1 }} placeholder="13:00" />
+            </div>
+            <div className="adminField" style={{ margin: 0 }}>
+              <input value={h.afternoon_open || ""} onChange={e => update(h.id, "afternoon_open", e.target.value)} disabled={h.is_closed} style={{ opacity: h.is_closed ? 0.4 : 1 }} placeholder="14:00" />
+            </div>
+            <div className="adminField" style={{ margin: 0 }}>
+              <input value={h.afternoon_close || ""} onChange={e => update(h.id, "afternoon_close", e.target.value)} disabled={h.is_closed} style={{ opacity: h.is_closed ? 0.4 : 1 }} placeholder="19:00" />
             </div>
             <div className="checkboxRow">
               <input type="checkbox" id={`closed-${h.id}`} checked={h.is_closed} onChange={e => update(h.id, "is_closed", e.target.checked)} />
@@ -141,7 +150,7 @@ function EventsTab({ password, showToast }) {
   const [events,  setEvents]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [form, setForm] = useState({ title: "", event_date: "", event_time: "", type: "Concert", description: "", featured: false });
+  const [form, setForm] = useState({ title: "", event_date: "", event_time: "", type: "Concert", description: "", featured: false, image_url: "" });
 
   const reload = useCallback(() => {
     fetch("/api/admin/events").then(r => r.json()).then(d => { setEvents(Array.isArray(d) ? d : []); setLoading(false); });
@@ -162,7 +171,7 @@ function EventsTab({ password, showToast }) {
     const data = await res.json();
     setSaving(false);
     if (data.id) {
-      setForm({ title: "", event_date: "", event_time: "", type: "Concert", description: "", featured: false });
+      setForm({ title: "", event_date: "", event_time: "", type: "Concert", description: "", featured: false, image_url: "" });
       reload();
       showToast({ text: "Événement ajouté !" });
     } else {
@@ -214,6 +223,7 @@ function EventsTab({ password, showToast }) {
           <label>Description (optionnel)</label>
           <textarea value={form.description} onChange={e => setF("description", e.target.value)} placeholder="Un concert en plein air devant la boutique…" rows={3} />
         </div>
+        <ImageUploader value={form.image_url} onChange={v => setF("image_url", v)} password={password} label="Image de l'événement (optionnel)" />
         <div className="checkboxRow" style={{ marginBottom: 20 }}>
           <input type="checkbox" id="featured" checked={form.featured} onChange={e => setF("featured", e.target.checked)} />
           <label htmlFor="featured">Mettre en avant (bordure colorée sur la carte)</label>
@@ -234,7 +244,7 @@ function EventsTab({ password, showToast }) {
               <div className="itemRow" key={ev.id}>
                 <div className="itemRowInfo">
                   <strong>{ev.title}</strong>
-                  <span>{ev.type} · {fmtDate(ev.event_date)}{ev.event_time ? ` à ${ev.event_time}` : ""}{ev.featured ? " · ⭐ mis en avant" : ""}</span>
+                  <span>{ev.type} · {fmtDate(ev.event_date)}{ev.event_time ? ` à ${ev.event_time}` : ""}{ev.featured ? " · ⭐ mis en avant" : ""}{ev.image_url ? " · 📷" : ""}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                   <button
@@ -258,7 +268,7 @@ function BrandsTab({ password, showToast }) {
   const [brands,  setBrands]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [form, setForm] = useState({ name: "", category: "Vêtements", description: "" });
+  const [form, setForm] = useState({ name: "", category: "Vêtements", description: "", image_url: "", featured: false });
 
   const reload = useCallback(() => {
     fetch("/api/admin/brands").then(r => r.json()).then(d => { setBrands(Array.isArray(d) ? d : []); setLoading(false); });
@@ -279,7 +289,7 @@ function BrandsTab({ password, showToast }) {
     const data = await res.json();
     setSaving(false);
     if (data.id) {
-      setForm({ name: "", category: "Vêtements", description: "" });
+      setForm({ name: "", category: "Vêtements", description: "", image_url: "", featured: false });
       reload();
       showToast({ text: "Marque ajoutée !" });
     } else {
@@ -292,6 +302,11 @@ function BrandsTab({ password, showToast }) {
     await fetch("/api/admin/brands", { method: "DELETE", headers: adminHeaders(password), body: JSON.stringify({ id }) });
     reload();
     showToast({ text: "Marque supprimée." });
+  }
+
+  async function toggleFeatured(brand) {
+    await fetch("/api/admin/brands", { method: "PATCH", headers: adminHeaders(password), body: JSON.stringify({ id: brand.id, featured: !brand.featured }) });
+    reload();
   }
 
   return (
@@ -317,6 +332,11 @@ function BrandsTab({ password, showToast }) {
           <label>Description courte (optionnel)</label>
           <input value={form.description} onChange={e => setF("description", e.target.value)} placeholder="Surf & beachwear" />
         </div>
+        <ImageUploader value={form.image_url} onChange={v => setF("image_url", v)} password={password} label="Logo/Image de la marque (optionnel)" />
+        <div className="checkboxRow" style={{ marginBottom: 20 }}>
+          <input type="checkbox" id="brandFeatured" checked={form.featured} onChange={e => setF("featured", e.target.checked)} />
+          <label htmlFor="brandFeatured">Afficher dans la mosaïque (mise en avant)</label>
+        </div>
         <button className="btnAdd" onClick={addBrand} disabled={saving}>{saving ? "Ajout…" : "+ Ajouter la marque"}</button>
       </div>
 
@@ -332,9 +352,16 @@ function BrandsTab({ password, showToast }) {
               <div className="itemRow" key={b.id}>
                 <div className="itemRowInfo">
                   <strong>{b.name}</strong>
-                  <span>{b.category}{b.description ? ` · ${b.description}` : ""}</span>
+                  <span>{b.category}{b.description ? ` · ${b.description}` : ""}{b.featured ? " · ⭐ visible" : ""}{b.image_url ? " · 📷" : ""}</span>
                 </div>
-                <button className="btnRemove" onClick={() => deleteBrand(b.id)}>×</button>
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  <button
+                    onClick={() => toggleFeatured(b)}
+                    style={{ background: "none", border: "1px solid #ddd", borderRadius: 4, padding: "4px 10px", cursor: "pointer", fontSize: 13, color: b.featured ? "var(--coral)" : "var(--text-light)" }}
+                    title={b.featured ? "Masquer de la mosaïque" : "Afficher dans la mosaïque"}
+                  >⭐</button>
+                  <button className="btnRemove" onClick={() => deleteBrand(b.id)}>×</button>
+                </div>
               </div>
             ))}
           </div>

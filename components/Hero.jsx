@@ -11,12 +11,6 @@ export default function Hero() {
           Vêtements et accessoires pour ceux qui vivent au rythme des vagues.
           Collections soigneusement choisies, inspirées par la côte atlantique.
         </p>
-        <a href="#collections" className="heroCta fadeUp delay4">
-          Découvrir les collections
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </a>
       </div>
       <div className="heroScroll">Scroll</div>
       <div className="heroWave">
